@@ -50,13 +50,34 @@ if (nrow(today_data) > 0) {
   print(unique(data$date_parsed))
 }
 
-# For the 7-day histogram (simplified version)
+# Get the latest 7 unique dates from the dataset (in case some days have missing data)
+latest_dates <- data %>%
+  distinct(date_parsed) %>%
+  arrange(desc(date_parsed)) %>%
+  slice(1:7) %>%
+  pull(date_parsed)
+
+# Filter the original data to include only these 7 dates
 latest_7_days <- data %>%
-  filter(date_parsed >= Sys.Date() - 6) %>%  # Last 7 days including today
+  filter(date_parsed %in% latest_dates) %>%
   count(date_parsed, hours_conditions)
 
+# Ensure the bars are in chronological order
+latest_7_days <- latest_7_days %>%
+  mutate(date_parsed = factor(date_parsed, levels = sort(latest_dates)))
+
+# Plot
 ggplot(latest_7_days, aes(x = date_parsed, y = n, fill = hours_conditions)) +
-  geom_bar(stat = "identity") +
-  labs(title = "Weather Condition Frequency (Last 7 Days)") +
-  scale_x_date(date_labels = "%b %d") +
-  theme_minimal()
+  geom_bar(stat = "identity", position = "stack") +
+  labs(
+    title = "Weather Condition Frequency (Last 7 Days)",
+    x = "Date",
+    y = "Count",
+    fill = "Condition"
+  ) +
+  scale_fill_brewer(palette = "Set3") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "right"
+  )
