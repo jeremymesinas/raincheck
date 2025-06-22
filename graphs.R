@@ -81,3 +81,42 @@ ggplot(latest_7_days, aes(x = date_parsed, y = n, fill = hours_conditions)) +
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "right"
   )
+
+#next
+# Get the peak rainfall per day
+peak_precip <- data %>%
+  group_by(date_parsed) %>%
+  summarise(max_hourly_precip = max(hours_precip, na.rm = TRUE), .groups = 'drop')
+
+# Plot
+ggplot(peak_precip, aes(x = date_parsed, y = max_hourly_precip)) +
+  geom_col(fill = "darkblue") +
+  geom_text(aes(label = max_hourly_precip), vjust = -0.5, size = 3) +
+  labs(
+    title = "Peak Hourly Precipitation Per Day",
+    x = "Date",
+    y = "Max Precipitation (mm)"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Count frequency of each weather condition
+condition_freq <- data %>%
+  count(hours_conditions) %>%
+  mutate(percentage = n / sum(n) * 100)
+
+# Plot pie chart
+# With labels for percentages
+ggplot(condition_freq, aes(x = "", y = n, fill = hours_conditions)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = paste0(round(percentage), "%")),
+            position = position_stack(vjust = 0.5), color = "white") +
+  labs(
+    title = "Overall Weather Condition Frequency",
+    fill = "Condition"
+  ) +
+  theme_void() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
