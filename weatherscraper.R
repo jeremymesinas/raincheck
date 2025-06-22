@@ -1,3 +1,4 @@
+install.packages("dotenv")
 # Check first so as to not reload r every single time
 if (!require("httr")) install.packages("httr", dependencies = TRUE)
 if (!require("jsonlite")) install.packages("jsonlite", dependencies = TRUE)
@@ -9,9 +10,16 @@ library(httr)
 library(jsonlite)
 library(dplyr)
 library(purrr)
+library(dotenv)
+
+# Load the .env file
+dotenv::load_dot_env(file = ".env")
+
+# Access the variables
+api_key <- Sys.getenv("API_KEY")
 
 # Set URL params
-api_key <- "key"
+#api_key <- ""
 lat <- 14.621795
 lon <- 121.065476
 url <- paste0("https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/",

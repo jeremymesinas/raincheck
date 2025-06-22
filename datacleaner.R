@@ -113,16 +113,16 @@ for (col_name in names(numeric_data)) {
 }
 
 #decimal score normalization for all numeric columns
-decimal_scaling <- function(x) {
-  if (is.numeric(x)) {
-    max_val <- max(abs(x), na.rm = TRUE)
-    if (max_val == 0) return(x) 
-    scale_factor <- 10 ^ ceiling(log10(max_val))
-    return(x / scale_factor)
-  } else {
-    return(x)  
-  }
-}
+#decimal_scaling <- function(x) {
+#  if (is.numeric(x)) {
+#    max_val <- max(abs(x), na.rm = TRUE)
+#    if (max_val == 0) return(x) 
+#    scale_factor <- 10 ^ ceiling(log10(max_val))
+#    return(x / scale_factor)
+#  } else {
+#    return(x)  
+#  }
+#}
 
 data <- as.data.frame(lapply(data, decimal_scaling))
 
