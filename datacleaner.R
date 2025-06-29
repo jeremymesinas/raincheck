@@ -124,7 +124,7 @@ for (col_name in names(numeric_data)) {
 #  }
 #}
 
-data <- as.data.frame(lapply(data, decimal_scaling))
+#data <- as.data.frame(lapply(data, decimal_scaling))
 
 #write CSV with outlier flags included
 write.csv(data, "hourly_weather_data_final.csv", row.names = FALSE)
