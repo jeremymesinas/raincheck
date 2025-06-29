@@ -1,5 +1,6 @@
 library(shiny)
 library(shinydashboard)
+library(leaflet)
 
 ui <- dashboardPage(
   dashboardHeader(
@@ -12,7 +13,7 @@ ui <- dashboardPage(
       menuItem("Map", tabName = "map", icon = icon("map")),
       menuItem("Daily Trends", tabName = "trends", icon = icon("bar-chart")),
       menuItem("Forecast", tabName = "forecast", icon = icon("search")),
-      menuItem("Models", tabName = "models", icon = icon("database")), # Suggested icon for 'models'
+      menuItem("Models", tabName = "models", icon = icon("database")),
       menuItem("About", tabName = "about", icon = icon("user"))
     )
   ),
@@ -47,11 +48,25 @@ ui <- dashboardPage(
           background-color: #000060 !important;
           color: white !important;
         }
+        
+        /* Custom button style */
+        .custom-btn {
+          background-color: #000080 !important;
+          color: white !important;
+          border: none;
+          padding: 8px 16px;
+          margin-top: 10px;
+        }
       "))
     ),
     tabItems(
       tabItem(tabName = "map",
-              h2("Map")),
+              h2("Map"),
+              h4("Tap the map to choose a coordinate"),
+              leafletOutput("map"),
+              verbatimTextOutput("coordinates"),
+              actionButton("okBtn", "OK", class = "custom-btn")
+      ),
       tabItem(tabName = "trends",
               h2("Daily Trends")),
       tabItem(tabName = "forecast",
@@ -64,6 +79,51 @@ ui <- dashboardPage(
   )
 )
 
-server <- function(input, output) { }
+server <- function(input, output, session) {
+  
+  # Reactive value to store clicked point
+  clicked_point <- reactiveVal(NULL)
+  
+  # Render the leaflet map
+  output$map <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%  # Adds default OpenStreetMap tiles
+      setView(lng = 121.7740, lat = 12.8797, zoom = 6)  # Philippines view
+  })
+  
+  # Observe map clicks and add markers
+  observeEvent(input$map_click, {
+    click <- input$map_click
+    clicked_point(click)
+    
+    leafletProxy("map") %>%
+      clearMarkers() %>%
+      addMarkers(lng = click$lng, lat = click$lat)
+  })
+  
+  # Display coordinates
+  output$coordinates <- renderText({
+    if (!is.null(clicked_point())) {
+      paste0("Latitude: ", round(clicked_point()$lat, 4), 
+             ", Longitude: ", round(clicked_point()$lng, 4))
+    } else {
+      "No location selected yet"
+    }
+  })
+  
+  # Observe OK button click
+  observeEvent(input$okBtn, {
+    if (!is.null(clicked_point())) {
+      showNotification(
+        paste("Location selected:", 
+              round(clicked_point()$lat, 4), ",", 
+              round(clicked_point()$lng, 4)),
+        type = "message"
+      )
+    } else {
+      showNotification("Please select a location first", type = "warning")
+    }
+  })
+}
 
 shinyApp(ui, server)
