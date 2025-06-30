@@ -7,7 +7,7 @@ library(dplyr)
 library(purrr)
 library(dotenv)
 library(tidyr)
-library(DT)  # Explicitly load DT package
+library(DT)
 
 # Load the .env file
 dotenv::load_dot_env(file = ".env")
@@ -87,7 +87,6 @@ ui <- dashboardPage(
               leafletOutput("map"),
               verbatimTextOutput("coordinates"),
               actionButton("okBtn", "Get Weather Data", class = "custom-btn"),
-              downloadButton("downloadBtn", "Download CSV", class = "custom-btn"),
               div(class = "data-table",
                   DTOutput("weatherTable"))
       ),
@@ -233,8 +232,10 @@ server <- function(input, output, session) {
       
       if (!is.null(data)) {
         weather_data(data)
+        # Automatically save the data when it's processed
+        write.csv(data, "hourly_weather_data_final.csv", row.names = FALSE)
         showNotification(
-          paste("Processed weather data loaded for:", 
+          paste("Weather data saved to hourly_weather_data_final.csv for:", 
                 round(lat, 4), ",", 
                 round(lon, 4)),
           type = "message"
@@ -246,17 +247,6 @@ server <- function(input, output, session) {
       showNotification("Please select a location first", type = "warning")
     }
   })
-  
-  # Download handler for CSV
-  output$downloadBtn <- downloadHandler(
-    filename = function() {
-      paste0("weather_data_", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      req(weather_data())
-      write.csv(weather_data(), file, row.names = FALSE)
-    }
-  )
   
   # Display processed weather data table
   output$weatherTable <- renderDT({
