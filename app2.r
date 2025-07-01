@@ -12,6 +12,10 @@ library(ggplot2)
 library(plotly)
 library(lubridate)
 library(scales)
+library(caret) 
+library(e1071) 
+library(factoextra) 
+library(cluster)
 
 # Load the .env file
 dotenv::load_dot_env(file = ".env")
