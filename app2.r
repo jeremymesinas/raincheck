@@ -27,7 +27,7 @@ ui <- dashboardPage(
       menuItem("Map", tabName = "map", icon = icon("map")),
       menuItem("Daily Trends", tabName = "trends", icon = icon("bar-chart")),
       menuItem("Forecast", tabName = "forecast", icon = icon("search")),
-      menuItem("Models", tabName = "models", icon = icon("database")),
+      #menuItem("Models", tabName = "models", icon = icon("database")),
       menuItem("About", tabName = "about", icon = icon("user"))
     )
   ),
@@ -132,9 +132,20 @@ ui <- dashboardPage(
               uiOutput("trendsUI")
       ),
       tabItem(tabName = "forecast",
-              h2("Forecast")),
-      tabItem(tabName = "models",
-              h2("Models")),
+              h2("Weather Forecasting Models"),
+              fluidRow(
+                box(width = 12, title = "Model Selection",
+                    selectInput("modelType", "Choose Model Type:",
+                                choices = c("Precipitation Regression", 
+                                            "Weather Condition Classification",
+                                            "Weather Pattern Clustering"),
+                                selected = "Precipitation Regression")
+                )
+              ),
+              uiOutput("forecastModelUI")
+      ),
+     # tabItem(tabName = "models",
+     #         h2("Models")),
       tabItem(tabName = "about",
               h2("About"))
     )
@@ -389,9 +400,9 @@ server <- function(input, output, session) {
                           text = paste("Time:", format(full_datetime, "%H:%M"),
                                        "<br>Precipitation:", hours_precip, "mm",
                                        "<br>Status:", ifelse(hours_precip >= 50, "Flood Warning", "Normal")))) +
-      geom_line(color = "#375a7f", linewidth = 1) +
+      geom_line(color = "#00CED1", linewidth = 1) +
       geom_point(aes(color = hours_precip >= 50), size = 3) +
-      geom_line(color = "#375a7f", alpha = 0.5) +  # Added extra line for better visibility
+      geom_line(color = "#00CED1", alpha = 0.5) +  # Added extra line for better visibility
       scale_color_manual(
         values = c("FALSE" = "#7FDBFF", "TRUE" = "#FF4136"),
         labels = c("Normal", "Flood Warning"),
@@ -446,7 +457,7 @@ server <- function(input, output, session) {
     p <- ggplot(data, aes(x = date_parsed, y = max_hourly_precip,
                           text = paste("Date:", date_parsed,
                                        "<br>Max Precipitation:", max_hourly_precip, "mm"))) +
-      geom_col(fill = "#2E86AB", alpha = 0.7) +  # Made color lighter
+      geom_col(fill = "#00CED1", alpha = 0.7) +  # Made color lighter
       geom_text(aes(label = max_hourly_precip), vjust = -0.5, size = 3, color = "#333333") +  # Darker text for better contrast
       labs(x = "Date", y = "Max Precipitation (mm)") +
       theme_minimal() +
@@ -488,7 +499,7 @@ server <- function(input, output, session) {
                           text = paste("Time:", hours_datetime,
                                        "<br>Precipitation:", hours_precip, "mm"))) +
       geom_line(color = "#0074D9", linewidth = 1) +
-      geom_point(color = "#0074D9", size = 3) +
+      geom_point(color = "#00CED1", size = 3) +
       geom_line(color = "#0074D9", alpha = 0.5) +  # Added extra line for better visibility
       labs(x = "Hour", y = "Precipitation (mm)") +
       theme_minimal() +
@@ -533,6 +544,274 @@ server <- function(input, output, session) {
       ) %>%
       config(displayModeBar = TRUE)
   })
+  
+  # Forecast Tab Server Logic
+  output$forecastModelUI <- renderUI({
+    req(weather_data())  # Ensure weather data is loaded
+    
+    if(input$modelType == "Precipitation Regression") {
+      tagList(
+        box(width = 12, title = "Precipitation Regression Model",
+            plotlyOutput("regressionPlot"),
+            verbatimTextOutput("regressionSummary")
+        ),
+        box(width = 12, title = "Prediction Results",
+            DTOutput("regressionResults")
+        )
+      )
+    } else if(input$modelType == "Weather Condition Classification") {
+      tagList(
+        box(width = 12, title = "Weather Condition Classification",
+            plotOutput("classificationPlot"),
+            verbatimTextOutput("classificationSummary")
+        ),
+        box(width = 12, title = "Confusion Matrix",
+            verbatimTextOutput("confusionMatrix")
+        )
+      )
+    } else {
+      tagList(
+        box(width = 12, title = "Weather Pattern Clusters",
+            plotOutput("clusterPlot"),
+            verbatimTextOutput("clusterSummary")
+        ),
+        box(width = 12, title = "Cluster Characteristics",
+            DTOutput("clusterTable")
+        )
+      )
+    }
+  })
+  
+  # Regression Model
+  output$regressionPlot <- renderPlotly({
+    req(weather_data())
+    data <- weather_data() %>%
+      mutate(datetime = as.Date(datetime)) %>%
+      select(temp, dew, humidity, windgust, windspeed, winddir, pressure,
+             cloudcover, visibility, solarradiation, uvindex, severerisk,
+             hours_temp, hours_humidity, hours_windgust, hours_windspeed,
+             hours_winddir, hours_pressure, hours_visibility, hours_cloudcover,
+             hours_solarradiation, hours_severerisk, precip) %>%
+      na.omit()
+    
+    set.seed(123)
+    train_rows <- sample(1:nrow(data), size = 0.7 * nrow(data))
+    training_data <- data[train_rows, ]
+    testing_data <- data[-train_rows, ]
+    
+    model_lm <- lm(precip ~ ., data = training_data)
+    predictions <- predict(model_lm, newdata = testing_data)
+    predictions[predictions < 0] <- 0
+    
+    results <- data.frame(
+      Actual = testing_data$precip,
+      Predicted = predictions
+    )
+    
+    p <- ggplot(results, aes(x = Actual, y = Predicted)) +
+      geom_point(color = "#00CED1", alpha = 0.6) +
+      geom_abline(intercept = 0, slope = 1, color = "red") +
+      labs(title = "Actual vs Predicted Precipitation",
+           x = "Actual Precipitation (mm)",
+           y = "Predicted Precipitation (mm)") +
+      theme_minimal()
+    
+    ggplotly(p) %>%
+      layout(hovermode = "closest")
+  })
+  
+  output$regressionSummary <- renderPrint({
+    req(weather_data())
+    data <- weather_data() %>%
+      mutate(datetime = as.Date(datetime)) %>%
+      select(temp, dew, humidity, windgust, windspeed, winddir, pressure,
+             cloudcover, visibility, solarradiation, uvindex, severerisk,
+             hours_temp, hours_humidity, hours_windgust, hours_windspeed,
+             hours_winddir, hours_pressure, hours_visibility, hours_cloudcover,
+             hours_solarradiation, hours_severerisk, precip) %>%
+      na.omit()
+    
+    set.seed(123)
+    train_rows <- sample(1:nrow(data), size = 0.7 * nrow(data))
+    training_data <- data[train_rows, ]
+    
+    model_lm <- lm(precip ~ ., data = training_data)
+    summary(model_lm)
+  })
+  
+  output$regressionResults <- renderDT({
+    req(weather_data())
+    data <- weather_data() %>%
+      mutate(datetime = as.Date(datetime)) %>%
+      select(temp, dew, humidity, windgust, windspeed, winddir, pressure,
+             cloudcover, visibility, solarradiation, uvindex, severerisk,
+             hours_temp, hours_humidity, hours_windgust, hours_windspeed,
+             hours_winddir, hours_pressure, hours_visibility, hours_cloudcover,
+             hours_solarradiation, hours_severerisk, precip) %>%
+      na.omit()
+    
+    set.seed(123)
+    train_rows <- sample(1:nrow(data), size = 0.7 * nrow(data))
+    training_data <- data[train_rows, ]
+    testing_data <- data[-train_rows, ]
+    
+    model_lm <- lm(precip ~ ., data = training_data)
+    predictions <- predict(model_lm, newdata = testing_data, interval = "prediction")
+    predictions[predictions < 0] <- 0
+    
+    results <- data.frame(
+      Actual = testing_data$precip,
+      Predicted = predictions[, "fit"],
+      Lower_Bound = predictions[, "lwr"],
+      Upper_Bound = predictions[, "upr"]
+    )
+    
+    datatable(results, options = list(scrollX = TRUE, pageLength = 5))
+  })
+  
+  # Classification Model
+  output$classificationPlot <- renderPlot({
+    req(weather_data())
+    data <- weather_data() %>%
+      select(temp, dew, humidity, precip, windspeed, pressure, 
+             cloudcover, visibility, hours_conditions) %>%
+      na.omit()
+    
+    data$hours_conditions <- as.factor(data$hours_conditions)
+    
+    set.seed(123)
+    train_index <- createDataPartition(data$hours_conditions, p = 0.7, list = FALSE)
+    train_data <- data[train_index, ]
+    test_data <- data[-train_index, ]
+    
+    nb_model <- naiveBayes(hours_conditions ~ ., data = train_data)
+    predictions <- predict(nb_model, test_data)
+    
+    conf_matrix <- confusionMatrix(predictions, test_data$hours_conditions)
+    
+    ggplot(as.data.frame(conf_matrix$table), 
+           aes(x = Reference, y = Prediction, fill = Freq)) +
+      geom_tile() +
+      geom_text(aes(label = Freq), color = "white") +
+      scale_fill_gradient(low = "#00CED1", high = "#000080") +
+      labs(title = "Confusion Matrix",
+           x = "Actual Conditions",
+           y = "Predicted Conditions") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  output$classificationSummary <- renderPrint({
+    req(weather_data())
+    data <- weather_data() %>%
+      select(temp, dew, humidity, precip, windspeed, pressure, 
+             cloudcover, visibility, hours_conditions) %>%
+      na.omit()
+    
+    data$hours_conditions <- as.factor(data$hours_conditions)
+    
+    set.seed(123)
+    train_index <- createDataPartition(data$hours_conditions, p = 0.7, list = FALSE)
+    train_data <- data[train_index, ]
+    
+    nb_model <- naiveBayes(hours_conditions ~ ., data = train_data)
+    print(nb_model)
+  })
+  
+  output$confusionMatrix <- renderPrint({
+    req(weather_data())
+    data <- weather_data() %>%
+      select(temp, dew, humidity, precip, windspeed, pressure, 
+             cloudcover, visibility, hours_conditions) %>%
+      na.omit()
+    
+    data$hours_conditions <- as.factor(data$hours_conditions)
+    
+    set.seed(123)
+    train_index <- createDataPartition(data$hours_conditions, p = 0.7, list = FALSE)
+    train_data <- data[train_index, ]
+    test_data <- data[-train_index, ]
+    
+    nb_model <- naiveBayes(hours_conditions ~ ., data = train_data)
+    predictions <- predict(nb_model, test_data)
+    
+    confusionMatrix(predictions, test_data$hours_conditions)
+  })
+  
+  # Clustering Model
+  output$clusterPlot <- renderPlot({
+    req(weather_data())
+    data <- weather_data() %>%
+      select(starts_with("hours_"),
+             -hours_datetime,
+             -hours_conditions,
+             -ends_with("_outlier"),
+             -ends_with("_deviation")) %>%
+      mutate(across(everything(), ~ as.numeric(.))) %>%
+      mutate(across(everything(), ~ ifelse(is.infinite(.), NA, .))) %>%
+      na.omit()
+    
+    scaled_data <- scale(data)
+    
+    set.seed(123)
+    kmeans_result <- kmeans(scaled_data, centers = 3, nstart = 25)
+    
+    fviz_cluster(kmeans_result, data = scaled_data,
+                 palette = c("#00CED1", "#000080", "#20B2AA"),
+                 geom = "point",
+                 ggtheme = theme_minimal()) +
+      labs(title = "Weather Pattern Clusters (k=3)")
+  })
+  
+  output$clusterSummary <- renderPrint({
+    req(weather_data())
+    data <- weather_data() %>%
+      select(starts_with("hours_"),
+             -hours_datetime,
+             -hours_conditions,
+             -ends_with("_outlier"),
+             -ends_with("_deviation")) %>%
+      mutate(across(everything(), ~ as.numeric(.))) %>%
+      mutate(across(everything(), ~ ifelse(is.infinite(.), NA, .))) %>%
+      na.omit()
+    
+    scaled_data <- scale(data)
+    
+    set.seed(123)
+    kmeans_result <- kmeans(scaled_data, centers = 3, nstart = 25)
+    
+    cat("Cluster sizes:\n")
+    print(kmeans_result$size)
+    cat("\nCluster centers (scaled):\n")
+    print(kmeans_result$centers)
+  })
+  
+  output$clusterTable <- renderDT({
+    req(weather_data())
+    data <- weather_data() %>%
+      select(starts_with("hours_"),
+             -hours_datetime,
+             -hours_conditions,
+             -ends_with("_outlier"),
+             -ends_with("_deviation")) %>%
+      mutate(across(everything(), ~ as.numeric(.))) %>%
+      mutate(across(everything(), ~ ifelse(is.infinite(.), NA, .))) %>%
+      na.omit()
+    
+    scaled_data <- scale(data)
+    
+    set.seed(123)
+    kmeans_result <- kmeans(scaled_data, centers = 3, nstart = 25)
+    
+    # Calculate mean values for each cluster
+    data$cluster <- kmeans_result$cluster
+    cluster_means <- data %>%
+      group_by(cluster) %>%
+      summarise(across(everything(), mean, na.rm = TRUE))
+    
+    datatable(cluster_means, options = list(scrollX = TRUE))
+  })
+  
 }
 
 shinyApp(ui, server)
