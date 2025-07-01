@@ -137,21 +137,149 @@ ui <- dashboardPage(
       ),
       tabItem(tabName = "forecast",
               h2("Weather Forecasting Models"),
-              fluidRow(
-                box(width = 12, title = "Model Selection",
-                    selectInput("modelType", "Choose Model Type:",
-                                choices = c("Precipitation Regression", 
-                                            "Weather Condition Classification",
-                                            "Weather Pattern Clustering"),
-                                selected = "Precipitation Regression")
-                )
-              ),
-              uiOutput("forecastModelUI")
+              div(style = "background-color: white;",  # Add this wrapper
+                  fluidRow(
+                    box(width = 12, title = "Model Selection",
+                        selectInput("modelType", "Choose Model Type:",
+                                    choices = c("Precipitation Regression", 
+                                                "Weather Condition Classification",
+                                                "Weather Pattern Clustering"),
+                                    selected = "Precipitation Regression")
+                    )
+                  ),
+                  uiOutput("forecastModelUI")
+              )
       ),
      # tabItem(tabName = "models",
      #         h2("Models")),
-      tabItem(tabName = "about",
-              h2("About"))
+     tabItem(tabName = "about",
+             h2("About RainCheck"),
+             fluidRow(
+               # Mission Section
+               box(
+                 width = 12,
+                 status = "primary",
+                 solidHeader = TRUE,
+                 title = "Our Mission",
+                 fluidRow(
+                   column(
+                     width = 4,
+                     tags$img(src = "https://via.placeholder.com/300x200?text=Weather+Analysis", 
+                              width = "100%", 
+                              style = "border-radius: 8px;")
+                   ),
+                   column(
+                     width = 8,
+                     p("RainCheck was founded with the mission to provide accurate, accessible weather analytics to everyone."),
+                     p("Our platform combines cutting-edge meteorological data with powerful machine learning models to deliver insights you can trust."),
+                     p("Whether you're a farmer planning crops, a city official preparing for storms, or just curious about weather patterns, RainCheck puts the power of weather intelligence in your hands.")
+                   )
+                 )
+               ),
+               
+               # Team Section
+               box(
+                 width = 12,
+                 status = "primary",
+                 solidHeader = TRUE,
+                 title = "Our Team",
+                 fluidRow(
+                   column(
+                     width = 3,
+                     align = "center",
+                     tags$img(src = "https://via.placeholder.com/150?text=Team+Member+1", 
+                              class = "img-circle", 
+                              width = "150px"),
+                     h4("Dr. Sarah Chen"),
+                     p("Lead Meteorologist"),
+                     p("PhD in Atmospheric Sciences")
+                   ),
+                   column(
+                     width = 3,
+                     align = "center",
+                     tags$img(src = "https://via.placeholder.com/150?text=Team+Member+2", 
+                              class = "img-circle", 
+                              width = "150px"),
+                     h4("James Rodriguez"),
+                     p("Data Scientist"),
+                     p("Specializes in weather ML models")
+                   ),
+                   column(
+                     width = 3,
+                     align = "center",
+                     tags$img(src = "https://via.placeholder.com/150?text=Team+Member+3", 
+                              class = "img-circle", 
+                              width = "150px"),
+                     h4("Priya Patel"),
+                     p("Software Engineer"),
+                     p("Full-stack developer")
+                   ),
+                   column(
+                     width = 3,
+                     align = "center",
+                     tags$img(src = "https://placehold.in/300x200@2x.png/dark", 
+                              class = "img-circle", 
+                              width = "150px"),
+                     h4("Michael Johnson"),
+                     p("UX Designer"),
+                     p("Makes complex data intuitive")
+                   )
+                 )
+               ),
+               
+               # Technology Section
+               box(
+                 width = 12,
+                 status = "primary",
+                 solidHeader = TRUE,
+                 title = "Our Technology",
+                 fluidRow(
+                   column(
+                     width = 8,
+                     h4("Powered by:"),
+                     tags$ul(
+                       tags$li("Real-time weather data from global satellite networks"),
+                       tags$li("Machine learning models trained on historical patterns"),
+                       tags$li("Interactive visualization frameworks"),
+                       tags$li("Cloud-based processing infrastructure")
+                     ),
+                     br(),
+                     p("Our tech stack includes R Shiny, Python, TensorFlow, and AWS cloud services.")
+                   ),
+                   column(
+                     width = 4,
+                     tags$img(src = "https://via.placeholder.com/300x200?text=Tech+Stack", 
+                              width = "100%",
+                              style = "border-radius: 8px;")
+                   )
+                 )
+               ),
+               
+               # Contact Section
+               box(
+                 width = 12,
+                 status = "primary",
+                 solidHeader = TRUE,
+                 title = "Contact Us",
+                 fluidRow(
+                   column(
+                     width = 6,
+                     h4("Get in Touch"),
+                     p(icon("envelope"), " Email: info@raincheck.com"),
+                     p(icon("phone"), " Phone: (555) 123-4567"),
+                     p(icon("map-marker"), " Address: 123 Weather Lane, Data City, DC 98765")
+                   ),
+                   column(
+                     width = 6,
+                     h4("Connect With Us"),
+                     p(icon("twitter"), " Twitter: @RainCheckApp"),
+                     p(icon("github"), " GitHub: github.com/RainCheck"),
+                     p(icon("linkedin"), " LinkedIn: linkedin.com/company/RainCheck")
+                   )
+                 )
+               )
+             )
+     )
     )
   )
 )
