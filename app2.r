@@ -9,6 +9,7 @@ library(dotenv)
 library(tidyr)
 library(DT)
 library(ggplot2)
+library(plotly)
 library(lubridate)
 library(scales)
 
@@ -96,6 +97,23 @@ ui <- dashboardPage(
           max-height: 600px;
           overflow-y: auto;
           padding-right: 10px;
+        }
+        
+        /* Two-column layout */
+        .chart-row {
+          display: flex;
+          flex-wrap: wrap;
+          margin: -10px;
+        }
+        .chart-col {
+          flex: 1;
+          min-width: 400px;
+          padding: 10px;
+        }
+        
+        /* Plotly modebar customization */
+        .modebar-container {
+          padding: 5px !important;
         }
       "))
     ),
@@ -284,6 +302,7 @@ server <- function(input, output, session) {
   })
   
   # Render the trends UI
+  # Render the trends UI
   output$trendsUI <- renderUI({
     if (is.null(weather_data())) {
       return(div(class = "alert alert-info", 
@@ -292,29 +311,36 @@ server <- function(input, output, session) {
     }
     
     div(class = "scrollable-content",
-        div(class = "chart-container",
-            h3("Today's Precipitation with Flood Warnings"),
-            plotOutput("todayPrecipPlot", height = "300px")),
-        
+        div(class = "chart-row",
+            div(class = "chart-col",
+                div(class = "chart-container",
+                    h3("Today's Precipitation with Flood Warnings"),
+                    plotlyOutput("todayPrecipPlot", height = "300px"))
+            ),
+            div(class = "chart-col",
+                div(class = "chart-container",
+                    h3("Hourly Wind Speeds"),
+                    plotlyOutput("windSpeedPlot", height = "300px"))
+            )
+        ),
+        div(class = "chart-row",
+            div(class = "chart-col",
+                div(class = "chart-container",
+                    h3("Peak Hourly Precipitation Per Day"),
+                    plotlyOutput("peakPrecipPlot", height = "300px"))
+            ),
+            div(class = "chart-col",
+                div(class = "chart-container",
+                    h3("Hourly Precipitation Points"),
+                    plotlyOutput("hourlyPrecipPlot", height = "300px"))
+            )
+        ),
         div(class = "chart-container",
             h3("Weather Condition Frequency (Last 7 Days)"),
-            plotOutput("conditionFreqPlot", height = "300px")),
-        
-        div(class = "chart-container",
-            h3("Peak Hourly Precipitation Per Day"),
-            plotOutput("peakPrecipPlot", height = "300px")),
-        
+            plotlyOutput("conditionFreqPlot", height = "300px")),
         div(class = "chart-container",
             h3("Overall Weather Condition Frequency"),
-            plotOutput("conditionPiePlot", height = "300px")),
-        
-        div(class = "chart-container",
-            h3("Hourly Precipitation Points"),
-            plotOutput("hourlyPrecipPlot", height = "300px")),
-        
-        div(class = "chart-container",
-            h3("Hourly Wind Speeds"),
-            plotOutput("windSpeedPlot", height = "300px"))
+            plotOutput("conditionPiePlot", height = "300px"))
     )
   })
   
@@ -355,13 +381,17 @@ server <- function(input, output, session) {
   })
   
   # Chart 1: Today's Line Graph with Flood Warnings
-  output$todayPrecipPlot <- renderPlot({
+  output$todayPrecipPlot <- renderPlotly({
     data <- chart_data()$today_data
     if (nrow(data) == 0) return(NULL)
     
-    ggplot(data, aes(x = full_datetime, y = hours_precip)) +
+    p <- ggplot(data, aes(x = full_datetime, y = hours_precip, 
+                          text = paste("Time:", format(full_datetime, "%H:%M"),
+                                       "<br>Precipitation:", hours_precip, "mm",
+                                       "<br>Status:", ifelse(hours_precip >= 50, "Flood Warning", "Normal")))) +
       geom_line(color = "#375a7f", linewidth = 1) +
       geom_point(aes(color = hours_precip >= 50), size = 3) +
+      geom_line(color = "#375a7f", alpha = 0.5) +  # Added extra line for better visibility
       scale_color_manual(
         values = c("FALSE" = "#7FDBFF", "TRUE" = "#FF4136"),
         labels = c("Normal", "Flood Warning"),
@@ -371,35 +401,69 @@ server <- function(input, output, session) {
       labs(x = "Time", y = "Precipitation (mm)") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    ggplotly(p, tooltip = "text") %>%
+      layout(
+        hovermode = "x unified",
+        margin = list(l = 50, r = 50, b = 50, t = 50, pad = 4),
+        xaxis = list(
+          rangeslider = list(visible = TRUE),
+          type = "date"
+        )
+      ) %>%
+      config(displayModeBar = TRUE)
   })
   
-  # Chart 2: Stacked Bar - Condition Frequency for Last 7 Days
-  output$conditionFreqPlot <- renderPlot({
+  # Chart 2: Stacked Bar - Condition Frequency for Last 7 Days (static)
+  output$conditionFreqPlot <- renderPlotly({
     data <- chart_data()$latest_7_days
     if (nrow(data) == 0) return(NULL)
     
-    ggplot(data, aes(x = date_parsed, y = n, fill = hours_conditions)) +
+    p <- ggplot(data, aes(x = date_parsed, y = n, fill = hours_conditions,
+                          text = paste("Date:", date_parsed,
+                                       "<br>Condition:", hours_conditions,
+                                       "<br>Count:", n,
+                                       "<br>Percentage:", round(n/sum(n)*100, 1), "%"))) +
       geom_bar(stat = "identity", position = "stack") +
       labs(x = "Date", y = "Count", fill = "Condition") +
       scale_fill_brewer(palette = "Pastel2") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    ggplotly(p, tooltip = "text") %>%
+      layout(
+        hovermode = "closest",
+        margin = list(l = 50, r = 50, b = 100, t = 50, pad = 4)
+      ) %>%
+      config(displayModeBar = TRUE)
   })
   
   # Chart 3: Bar Chart - Peak Precip Per Day
-  output$peakPrecipPlot <- renderPlot({
+  output$peakPrecipPlot <- renderPlotly({
     data <- chart_data()$peak_precip
     if (nrow(data) == 0) return(NULL)
     
-    ggplot(data, aes(x = date_parsed, y = max_hourly_precip)) +
-      geom_col(fill = "#2E86AB") +
-      geom_text(aes(label = max_hourly_precip), vjust = -0.5, size = 3) +
+    p <- ggplot(data, aes(x = date_parsed, y = max_hourly_precip,
+                          text = paste("Date:", date_parsed,
+                                       "<br>Max Precipitation:", max_hourly_precip, "mm"))) +
+      geom_col(fill = "#2E86AB", alpha = 0.7) +  # Made color lighter
+      geom_text(aes(label = max_hourly_precip), vjust = -0.5, size = 3, color = "#333333") +  # Darker text for better contrast
       labs(x = "Date", y = "Max Precipitation (mm)") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    ggplotly(p, tooltip = "text") %>%
+      layout(
+        hovermode = "x unified",
+        xaxis = list(
+          rangeslider = list(visible = TRUE),
+          type = "date"
+        )
+      ) %>%
+      config(displayModeBar = TRUE)
   })
   
-  # Chart 4: Pie Chart - Overall Weather Condition Frequency
+  # Chart 4: Pie Chart - Overall Weather Condition Frequency (static)
   output$conditionPiePlot <- renderPlot({
     data <- chart_data()$condition_freq
     if (nrow(data) == 0) return(NULL)
@@ -411,33 +475,63 @@ server <- function(input, output, session) {
                 position = position_stack(vjust = 0.5), color = "white") +
       labs(fill = "Condition") +
       theme_void() +
-      theme(plot.title = element_text(hjust = 0.5))
+      theme(plot.title = element_text(hjust = 0.5, size = 14),
+      legend.text = element_text(size=12))
   })
   
   # Chart 5: SCATTERPLOT - Hourly Precip for Today
-  output$hourlyPrecipPlot <- renderPlot({
+  output$hourlyPrecipPlot <- renderPlotly({
     data <- chart_data()$today_unique
     if (nrow(data) == 0) return(NULL)
     
-    ggplot(data, aes(x = hours_datetime, y = hours_precip)) +
+    p <- ggplot(data, aes(x = hours_datetime, y = hours_precip,
+                          text = paste("Time:", hours_datetime,
+                                       "<br>Precipitation:", hours_precip, "mm"))) +
+      geom_line(color = "#0074D9", linewidth = 1) +
       geom_point(color = "#0074D9", size = 3) +
+      geom_line(color = "#0074D9", alpha = 0.5) +  # Added extra line for better visibility
       labs(x = "Hour", y = "Precipitation (mm)") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    ggplotly(p, tooltip = "text") %>%
+      layout(
+        hovermode = "x unified",
+        margin = list(l = 50, r = 50, b = 50, t = 50, pad = 4),
+        xaxis = list(
+          rangeslider = list(visible = TRUE),
+          type = "date"
+        )
+      ) %>%
+      config(displayModeBar = TRUE)
   })
   
   # Chart 6: LINE GRAPH - Hourly Wind Speed Today
-  output$windSpeedPlot <- renderPlot({
+  output$windSpeedPlot <- renderPlotly({
     data <- chart_data()$today_data
     if (nrow(data) == 0) return(NULL)
     
-    ggplot(data, aes(x = full_datetime, y = hours_windspeed)) +
+    p <- ggplot(data, aes(x = full_datetime, y = hours_windspeed,
+                          text = paste("Time:", format(full_datetime, "%H:%M"),
+                                       "<br>Wind Speed:", hours_windspeed, "km/h"))) +
       geom_line(color = "#20B2AA", linewidth = 1) +
       geom_point(color = "#00CED1", size = 2) +
+      geom_line(color = "#20B2AA", alpha = 0.5) +  # Added extra line for better visibility
       scale_x_datetime(date_labels = "%H:%M", breaks = pretty_breaks(n = 10)) +
       labs(x = "Time", y = "Wind Speed (km/h)") +
       theme_minimal() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    ggplotly(p, tooltip = "text") %>%
+      layout(
+        hovermode = "x unified",
+        margin = list(l = 50, r = 50, b = 50, t = 50, pad = 4),
+        xaxis = list(
+          rangeslider = list(visible = TRUE),
+          type = "date"
+        )
+      ) %>%
+      config(displayModeBar = TRUE)
   })
 }
 
