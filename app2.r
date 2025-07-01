@@ -163,6 +163,12 @@ ui <- dashboardPage(
      # tabItem(tabName = "models",
      #         h2("Models")),
      tabItem(tabName = "about",
+             tags$style(HTML("
+                .box-header {
+                  background-color: #000080 !important;
+                  color: white !important;
+                }
+              ")),
              h2("About RainCheck"),
              fluidRow(
                # Mission Section
@@ -174,15 +180,13 @@ ui <- dashboardPage(
                  fluidRow(
                    column(
                      width = 4,
-                     tags$img(src = "https://via.placeholder.com/300x200?text=Weather+Analysis", 
+                     tags$img(src = "https://raw.githubusercontent.com/jeremymesinas/raincheck/main/raincheck.png", 
                               width = "100%", 
                               style = "border-radius: 8px;")
                    ),
                    column(
                      width = 8,
                      p("RainCheck was founded with the mission to provide accurate, accessible weather analytics to everyone."),
-                     p("Our platform combines cutting-edge meteorological data with powerful machine learning models to deliver insights you can trust."),
-                     p("Whether you're a farmer planning crops, a city official preparing for storms, or just curious about weather patterns, RainCheck puts the power of weather intelligence in your hands.")
                    )
                  )
                ),
@@ -257,12 +261,7 @@ ui <- dashboardPage(
                      br(),
                      p("Our tech stack includes R Shiny, Python, TensorFlow, and AWS cloud services.")
                    ),
-                   column(
-                     width = 4,
-                     tags$img(src = "https://via.placeholder.com/300x200?text=Tech+Stack", 
-                              width = "100%",
-                              style = "border-radius: 8px;")
-                   )
+
                  )
                ),
                
