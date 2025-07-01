@@ -22,8 +22,18 @@ dotenv::load_dot_env(file = ".env")
 
 ui <- dashboardPage(
   dashboardHeader(
-    title = tags$span("RainCheck", style = "color: white; font-weight: bold;"),
-    titleWidth = 250
+    title = div(
+      style = "display: flex; align-items: center; height: 100%; padding: 5px 0;",
+      tags$img(
+        src = "https://raw.githubusercontent.com/jeremymesinas/raincheck/main/raincheck.png",
+        style = "height: 50px; width: auto; object-fit: contain;"  # Fixed height for logo
+      )
+    ),
+    titleWidth = 200,
+    tags$li(
+      class = "dropdown",
+      tags$style(".main-header .logo {height: 60px !important;}")  # Makes header taller
+    )
   ),
   dashboardSidebar(
     width = 250,
@@ -184,46 +194,47 @@ ui <- dashboardPage(
                  solidHeader = TRUE,
                  title = "Our Team",
                  fluidRow(
-                   column(
-                     width = 3,
-                     align = "center",
-                     tags$img(src = "https://via.placeholder.com/150?text=Team+Member+1", 
-                              class = "img-circle", 
-                              width = "150px"),
-                     h4("Dr. Sarah Chen"),
-                     p("Lead Meteorologist"),
-                     p("PhD in Atmospheric Sciences")
+                   style = "display: flex; flex-wrap: nowrap; overflow-x: auto; justify-content: center;",
+                   
+                   # Team Member 1
+                   div(style = "flex: 0 0 auto; width: 20%; max-width: 220px; padding: 0 10px; text-align: center;",
+                       tags$img(src = "https://tip.instructure.com/images/thumbnails/19037587/h0Jchhl21eERByZkpi0AWLEexQfRq0m0ZyOqQWro", 
+                                class = "img-circle", 
+                                style = "width: 50px; height: 50px; object-fit: cover;"),
+                       h4("Arlen Sean G. Baita"),
                    ),
-                   column(
-                     width = 3,
-                     align = "center",
-                     tags$img(src = "https://via.placeholder.com/150?text=Team+Member+2", 
-                              class = "img-circle", 
-                              width = "150px"),
-                     h4("James Rodriguez"),
-                     p("Data Scientist"),
-                     p("Specializes in weather ML models")
+                   
+                   # Team Member 2
+                   div(style = "flex: 0 0 auto; width: 20%; max-width: 220px; padding: 0 10px; text-align: center;",
+                       tags$img(src = "https://tip.instructure.com/images/thumbnails/19388041/eH5vNq0Jk4qmlHjbUaA9rSiUN0dqO5cPpPGXPEoj", 
+                                class = "img-circle", 
+                                style = "width: 50px; height: 50px; object-fit: cover;"),
+                       h4("Gian Matthew F. Magabilin"),
                    ),
-                   column(
-                     width = 3,
-                     align = "center",
-                     tags$img(src = "https://via.placeholder.com/150?text=Team+Member+3", 
-                              class = "img-circle", 
-                              width = "150px"),
-                     h4("Priya Patel"),
-                     p("Software Engineer"),
-                     p("Full-stack developer")
+                   
+                   # Team Member 3
+                   div(style = "flex: 0 0 auto; width: 20%; max-width: 220px; padding: 0 10px; text-align: center;",
+                       tags$img(src = "https://raw.githubusercontent.com/jeremymesinas/raincheck/main/maristela.png", 
+                                class = "img-circle", 
+                                style = "width: 50px; height: 50px; object-fit: cover;"),
+                       h4("Miguel Antonio B. Maristela"),
                    ),
-                   column(
-                     width = 3,
-                     align = "center",
-                     tags$img(src = "https://placehold.in/300x200@2x.png/dark", 
-                              class = "img-circle", 
-                              width = "150px"),
-                     h4("Michael Johnson"),
-                     p("UX Designer"),
-                     p("Makes complex data intuitive")
-                   )
+                   
+                   # Team Member 4
+                   div(style = "flex: 0 0 auto; width: 20%; max-width: 220px; padding: 0 10px; text-align: center;",
+                       tags$img(src = "https://raw.githubusercontent.com/jeremymesinas/raincheck/main/mendiola.png", 
+                                class = "img-circle", 
+                                style = "width: 50px; height: 50px; object-fit: cover;"),
+                       h4("Timothy Josh O. Mendiola"),
+                   ),
+                   
+                   # Team Member 5
+                   div(style = "flex: 0 0 auto; width: 20%; max-width: 220px; padding: 0 10px; text-align: center;",
+                       tags$img(src = "https://tip.instructure.com/images/thumbnails/17492823/6XF2nQM4sSFNh2b8rnZLRBSKq9pRoGiMEKar5ig0", 
+                                class = "img-circle", 
+                                style = "width: 50px; height: 50px; object-fit: cover;"),
+                       h4("Christian Jeremy D. Mesinas"),
+                   ),
                  )
                ),
                
@@ -445,11 +456,10 @@ server <- function(input, output, session) {
   })
   
   # Render the trends UI
-  # Render the trends UI
   output$trendsUI <- renderUI({
     if (is.null(weather_data())) {
       return(div(class = "alert alert-info", 
-                 style = "padding: 20px; background-color: #e7f3fe; border-left: 5px solid #2196F3;",
+                 style = "padding: 20px; background-color: #000080; border-left: 5px solid #000080;",
                  "Please choose a coordinate first in the Map tab and click 'Get Weather Data'"))
     }
     
