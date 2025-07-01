@@ -8,6 +8,9 @@ library(purrr)
 library(dotenv)
 library(tidyr)
 library(DT)
+library(ggplot2)
+library(lubridate)
+library(scales)
 
 # Load the .env file
 dotenv::load_dot_env(file = ".env")
@@ -78,6 +81,22 @@ ui <- dashboardPage(
         .dataTables_wrapper {
           overflow-x: auto;
         }
+        
+        /* Chart containers */
+        .chart-container {
+          background-color: white;
+          border-radius: 5px;
+          padding: 15px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        /* Scrollable content */
+        .scrollable-content {
+          max-height: 600px;
+          overflow-y: auto;
+          padding-right: 10px;
+        }
       "))
     ),
     tabItems(
@@ -91,7 +110,9 @@ ui <- dashboardPage(
                   DTOutput("weatherTable"))
       ),
       tabItem(tabName = "trends",
-              h2("Daily Trends")),
+              h2("Daily Trends"),
+              uiOutput("trendsUI")
+      ),
       tabItem(tabName = "forecast",
               h2("Forecast")),
       tabItem(tabName = "models",
@@ -260,6 +281,163 @@ server <- function(input, output, session) {
       ),
       rownames = FALSE
     )
+  })
+  
+  # Render the trends UI
+  output$trendsUI <- renderUI({
+    if (is.null(weather_data())) {
+      return(div(class = "alert alert-info", 
+                 style = "padding: 20px; background-color: #e7f3fe; border-left: 5px solid #2196F3;",
+                 "Please choose a coordinate first in the Map tab and click 'Get Weather Data'"))
+    }
+    
+    div(class = "scrollable-content",
+        div(class = "chart-container",
+            h3("Today's Precipitation with Flood Warnings"),
+            plotOutput("todayPrecipPlot", height = "300px")),
+        
+        div(class = "chart-container",
+            h3("Weather Condition Frequency (Last 7 Days)"),
+            plotOutput("conditionFreqPlot", height = "300px")),
+        
+        div(class = "chart-container",
+            h3("Peak Hourly Precipitation Per Day"),
+            plotOutput("peakPrecipPlot", height = "300px")),
+        
+        div(class = "chart-container",
+            h3("Overall Weather Condition Frequency"),
+            plotOutput("conditionPiePlot", height = "300px")),
+        
+        div(class = "chart-container",
+            h3("Hourly Precipitation Points"),
+            plotOutput("hourlyPrecipPlot", height = "300px")),
+        
+        div(class = "chart-container",
+            h3("Hourly Wind Speeds"),
+            plotOutput("windSpeedPlot", height = "300px"))
+    )
+  })
+  
+  # Reactive data processing for charts
+  chart_data <- reactive({
+    req(weather_data())
+    
+    data <- weather_data() %>%
+      mutate(
+        date_parsed = as.Date(datetime),
+        full_datetime = as.POSIXct(paste(datetime, hours_datetime), format = "%Y-%m-%d %H:%M", tz = "Asia/Manila")
+      )
+    
+    list(
+      today_data = data %>% filter(date_parsed == Sys.Date()),
+      latest_7_days = {
+        latest_dates <- data %>%
+          distinct(date_parsed) %>%
+          arrange(desc(date_parsed)) %>%
+          slice(1:7) %>%
+          pull(date_parsed)
+        
+        data %>%
+          filter(date_parsed %in% latest_dates) %>%
+          count(date_parsed, hours_conditions) %>%
+          mutate(date_parsed = factor(date_parsed, levels = sort(latest_dates)))
+      },
+      peak_precip = data %>%
+        group_by(date_parsed) %>%
+        summarise(max_hourly_precip = max(hours_precip, na.rm = TRUE), .groups = 'drop'),
+      condition_freq = data %>%
+        count(hours_conditions) %>%
+        mutate(percentage = n / sum(n) * 100),
+      today_unique = data %>%
+        filter(date_parsed == Sys.Date()) %>%
+        distinct(hours_datetime, .keep_all = TRUE)
+    )
+  })
+  
+  # Chart 1: Today's Line Graph with Flood Warnings
+  output$todayPrecipPlot <- renderPlot({
+    data <- chart_data()$today_data
+    if (nrow(data) == 0) return(NULL)
+    
+    ggplot(data, aes(x = full_datetime, y = hours_precip)) +
+      geom_line(color = "#375a7f", linewidth = 1) +
+      geom_point(aes(color = hours_precip >= 50), size = 3) +
+      scale_color_manual(
+        values = c("FALSE" = "#7FDBFF", "TRUE" = "#FF4136"),
+        labels = c("Normal", "Flood Warning"),
+        name = "Precip Level"
+      ) +
+      scale_x_datetime(date_labels = "%H:%M", breaks = pretty_breaks(n = 10)) +
+      labs(x = "Time", y = "Precipitation (mm)") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  # Chart 2: Stacked Bar - Condition Frequency for Last 7 Days
+  output$conditionFreqPlot <- renderPlot({
+    data <- chart_data()$latest_7_days
+    if (nrow(data) == 0) return(NULL)
+    
+    ggplot(data, aes(x = date_parsed, y = n, fill = hours_conditions)) +
+      geom_bar(stat = "identity", position = "stack") +
+      labs(x = "Date", y = "Count", fill = "Condition") +
+      scale_fill_brewer(palette = "Pastel2") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  # Chart 3: Bar Chart - Peak Precip Per Day
+  output$peakPrecipPlot <- renderPlot({
+    data <- chart_data()$peak_precip
+    if (nrow(data) == 0) return(NULL)
+    
+    ggplot(data, aes(x = date_parsed, y = max_hourly_precip)) +
+      geom_col(fill = "#2E86AB") +
+      geom_text(aes(label = max_hourly_precip), vjust = -0.5, size = 3) +
+      labs(x = "Date", y = "Max Precipitation (mm)") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  # Chart 4: Pie Chart - Overall Weather Condition Frequency
+  output$conditionPiePlot <- renderPlot({
+    data <- chart_data()$condition_freq
+    if (nrow(data) == 0) return(NULL)
+    
+    ggplot(data, aes(x = "", y = n, fill = hours_conditions)) +
+      geom_bar(width = 1, stat = "identity") +
+      coord_polar(theta = "y") +
+      geom_text(aes(label = paste0(round(percentage), "%")),
+                position = position_stack(vjust = 0.5), color = "white") +
+      labs(fill = "Condition") +
+      theme_void() +
+      theme(plot.title = element_text(hjust = 0.5))
+  })
+  
+  # Chart 5: SCATTERPLOT - Hourly Precip for Today
+  output$hourlyPrecipPlot <- renderPlot({
+    data <- chart_data()$today_unique
+    if (nrow(data) == 0) return(NULL)
+    
+    ggplot(data, aes(x = hours_datetime, y = hours_precip)) +
+      geom_point(color = "#0074D9", size = 3) +
+      labs(x = "Hour", y = "Precipitation (mm)") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  # Chart 6: LINE GRAPH - Hourly Wind Speed Today
+  output$windSpeedPlot <- renderPlot({
+    data <- chart_data()$today_data
+    if (nrow(data) == 0) return(NULL)
+    
+    ggplot(data, aes(x = full_datetime, y = hours_windspeed)) +
+      geom_line(color = "#20B2AA", linewidth = 1) +
+      geom_point(color = "#00CED1", size = 2) +
+      scale_x_datetime(date_labels = "%H:%M", breaks = pretty_breaks(n = 10)) +
+      labs(x = "Time", y = "Wind Speed (km/h)") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
   })
 }
 
