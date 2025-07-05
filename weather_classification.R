@@ -11,7 +11,9 @@ str(weather_data)
 summary(weather_data)
 
 
-selected_cols <- c("temp", "dew", "humidity", "precip", "windspeed", "pressure", 
+#select relevant columns
+selected_cols <- 
+  c("temp", "dew", "humidity", "precip", "windspeed", "pressure", 
                    "cloudcover", "visibility", "conditions")
 
 

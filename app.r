@@ -172,6 +172,7 @@ ui <- dashboardPage(
              h2("About RainCheck"),
              fluidRow(
                # Mission Section
+               # Mission Section
                box(
                  width = 12,
                  status = "primary",
@@ -180,16 +181,24 @@ ui <- dashboardPage(
                  fluidRow(
                    column(
                      width = 4,
-                     tags$img(src = "https://raw.githubusercontent.com/jeremymesinas/raincheck/main/raincheck.png", 
-                              width = "100%", 
-                              style = "border-radius: 8px;")
+                     tags$img(
+                       src = "https://raw.githubusercontent.com/jeremymesinas/raincheck/main/raincheck.png", 
+                       width = "100%", 
+                       style = "border-radius: 8px;"
+                     )
                    ),
                    column(
                      width = 8,
-                     p("RainCheck was founded with the mission to provide accurate, accessible weather analytics to everyone."),
+                     tags$p(
+                       "RainCheck was founded with the mission to provide accurate, accessible weather analytics to everyone. ",
+                       "We aim to empower individuals, communities, and organizations with timely and data-driven weather insights to make informed decisions, stay prepared, and build resilience against climate uncertainties.",
+                       style = "font-size: 16px; line-height: 1.6;"
+                     )
                    )
                  )
                ),
+               
+
                
                # Team Section
                box(
@@ -253,13 +262,12 @@ ui <- dashboardPage(
                      width = 8,
                      h4("Powered by:"),
                      tags$ul(
-                       tags$li("Real-time weather data from global satellite networks"),
+                       tags$li("Real-time weather data from Visual Crossing API"),
                        tags$li("Machine learning models trained on historical patterns"),
                        tags$li("Interactive visualization frameworks"),
                        tags$li("Cloud-based processing infrastructure")
                      ),
                      br(),
-                     p("Our tech stack includes R Shiny, Python, TensorFlow, and AWS cloud services.")
                    ),
 
                  )
@@ -275,15 +283,15 @@ ui <- dashboardPage(
                    column(
                      width = 6,
                      h4("Get in Touch"),
-                     p(icon("envelope"), " Email: info@raincheck.com"),
-                     p(icon("phone"), " Phone: (555) 123-4567"),
-                     p(icon("map-marker"), " Address: 123 Weather Lane, Data City, DC 98765")
+                     p(icon("envelope"), " Email: raincheck@tip.edu.ph"),
+                     p(icon("phone"), " Phone: (63) 917 465 4689"),
+                     p(icon("map-marker"), " Address: 938 Aurora Boulevard, Cubao, Quezon City")
                    ),
                    column(
                      width = 6,
                      h4("Connect With Us"),
                      p(icon("twitter"), " Twitter: @RainCheckApp"),
-                     p(icon("github"), " GitHub: github.com/RainCheck"),
+                     p(icon("github"), " GitHub: github.com/jeremymesinas/raincheck"),
                      p(icon("linkedin"), " LinkedIn: linkedin.com/company/RainCheck")
                    )
                  )

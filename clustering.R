@@ -1,13 +1,10 @@
-# 1. Install necessary packages if you haven't already
-# install.packages(c("readr", "cluster", "factoextra", "dplyr"))
-
 # Load the installed packages
 library(readr)
 library(cluster)
 library(factoextra)
 library(dplyr)
 
-# 2. Load your CSV file
+# 2. Load CSV file
 weather_data <- read_csv("hourly_weather_data_final.csv")
 
 # 3. Select relevant numerical 'hours_' columns for clustering
